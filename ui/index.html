@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Deployment Validator</title>
+<style>
+  :root {
+    --brand-blue: #1a1a2e;
+    --brand-light: #0066cc;
+    --pass: #22c55e;
+    --fail: #ef4444;
+    --warn: #f59e0b;
+    --skip: #94a3b8;
+    --bg: #f8fafc;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: #1e293b; }
+
+  header {
+    background: var(--brand-blue);
+    color: white;
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 600; }
+  header span { opacity: 0.7; font-size: 0.875rem; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 32px 24px; }
+
+  .submit-card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    margin-bottom: 28px;
+  }
+  .submit-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--brand-blue); }
+  .input-row { display: flex; gap: 12px; }
+  input[type=text] {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input[type=text]:focus { border-color: var(--brand-light); }
+  .meta-row { display: flex; gap: 12px; margin-top: 10px; }
+  .meta-row input { flex: 1; }
+
+  button.primary {
+    background: var(--brand-blue);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    white-space: nowrap;
+  }
+  button.primary:hover { background: var(--brand-light); }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .pipeline {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+    display: none;
+  }
+  .pipeline.visible { display: block; }
+
+  .pipeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .verdict-badge {
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.875rem;
+  }
+  .verdict-approved { background: #dcfce7; color: #15803d; }
+  .verdict-rejected { background: #fee2e2; color: #b91c1c; }
+  .verdict-running  { background: #dbeafe; color: #1d4ed8; }
+
+  .agent-type-badge {
+    display: inline-block;
+    background: #f1f5f9;
+    color: #475569;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .stages { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .stage {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1.5px solid transparent;
+    transition: all .3s;
+  }
+  .stage.running  { border-color: #93c5fd; background: #eff6ff; }
+  .stage.complete { border-color: #bbf7d0; background: #f0fdf4; }
+  .stage.failed   { border-color: #fca5a5; background: #fff1f2; }
+  .stage-icon { font-size: 1.1rem; width: 24px; text-align: center; }
+  .stage-name { font-size: 0.875rem; font-weight: 600; flex: 1; }
+  .stage-count { font-size: 0.8rem; color: #64748b; }
+
+  .score-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .score-box {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .score-box .label { font-size: 0.75rem; color: #64748b; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  .score-box .value { font-size: 1.5rem; font-weight: 800; }
+  .score-box .value.pass { color: var(--pass); }
+  .score-box .value.fail { color: var(--fail); }
+  .score-box .value.warn { color: var(--warn); }
+
+  .results-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .results-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #f1f5f9;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #64748b;
+  }
+  .results-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+  .results-table tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+  .tag-hard { background: #fee2e2; color: #b91c1c; }
+  .tag-soft { background: #fef3c7; color: #92400e; }
+  .tag-quality { background: #dbeafe; color: #1e40af; }
+  .icon-pass { color: var(--pass); }
+  .icon-fail { color: var(--fail); }
+  .icon-warn { color: var(--warn); }
+  .icon-skip { color: var(--skip); }
+
+  .warnings-box {
+    background: #fffbeb;
+    border: 1.5px solid #fde68a;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .warnings-box h4 { font-size: 0.8rem; font-weight: 700; color: #92400e; margin-bottom: 8px; }
+  .warnings-box ul { list-style: none; }
+  .warnings-box li { font-size: 0.8rem; color: #78350f; margin-bottom: 4px; }
+  .warnings-box li::before { content: "⚠️ "; }
+
+  .soul-box {
+    background: #f0f9ff;
+    border: 1.5px solid #bae6fd;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: #0369a1;
+  }
+  .soul-box strong { display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Agent Deployment Validator</h1>
+    <span>enterprise Micro · Powered by soul.py</span>
+  </div>
+  <div style="margin-left:auto;font-size:.8rem;opacity:.7" id="rules-version">Loading rules...</div>
+</header>
+
+<div class="container">
+  <div class="submit-card">
+    <h2>Submit Agent for Validation</h2>
+    <div class="input-row">
+      <input type="text" id="repo-url" placeholder="https://github.com/your-org/your-agent" oninput="autoParseBranch(this.value)" />
+      <input type="text" id="branch" placeholder="Branch (optional, e.g. main)" style="max-width:220px" />
+      <button class="primary" id="submit-btn" onclick="submitAgent()">Validate</button>
+    </div>
+    <div class="meta-row">
+      <input type="text" id="submitter" placeholder="Your name" />
+      <input type="text" id="team" placeholder="Team name" />
+    </div>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <div class="pipeline-header">
+      <div>
+        <h2 style="font-size:1rem;font-weight:600;color:var(--brand-blue)" id="pipeline-repo"></h2>
+        <div style="font-size:.8rem;color:#64748b;margin-top:4px" id="pipeline-ts"></div>
+      </div>
+      <div class="verdict-badge verdict-running" id="verdict-badge">Running...</div>
+    </div>
+
+    <div id="agent-type-badge" class="agent-type-badge" style="display:none"></div>
+
+    <div class="stages" id="stages">
+      <div class="stage running" id="stage-hard"><span class="stage-icon">🔴</span><span class="stage-name">Hard Gates</span><span class="stage-count" id="hard-count">—</span></div>
+      <div class="stage" id="stage-soft"><span class="stage-icon">🟡</span><span class="stage-name">Soft Gates</span><span class="stage-count" id="soft-count">—</span></div>
+      <div class="stage" id="stage-quality"><span class="stage-icon">🔵</span><span class="stage-name">Quality Score</span><span class="stage-count" id="quality-count">—</span></div>
+      <div class="stage" id="stage-memory"><span class="stage-icon">🧠</span><span class="stage-name">soul.py Memory Update</span><span class="stage-count"></span></div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-box"><div class="label">Hard Gates</div><div class="value" id="score-hard">—</div></div>
+      <div class="score-box"><div class="label">Soft Gates</div><div class="value" id="score-soft">—</div></div>
+      <div class="score-box"><div class="label">Quality Score</div><div class="value" id="score-quality">—</div></div>
+    </div>
+
+    <div class="warnings-box" id="warnings-box" style="display:none">
+      <h4>Warnings (deployment allowed with warnings)</h4>
+      <ul id="warnings-list"></ul>
+    </div>
+
+    <table class="results-table" id="results-table" style="display:none">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Rule</th>
+          <th>Tier</th>
+          <th>Result</th>
+          <th>Message</th>
+        </tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
+
+    <div class="soul-box" id="soul-box" style="display:none">
+      <strong>🧠 soul.py Memory Note</strong>
+      <span id="soul-note"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+let pollInterval = null;
+
+async function loadHealth() {
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    document.getElementById('rules-version').textContent =
+      `Rules: ${d.rules_version} · ${d.rules_loaded} rules loaded`;
+  } catch(e) {}
+}
+
+async function submitAgent() {
+  const url = document.getElementById('repo-url').value.trim();
+  if (!url) return;
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Validating...';
+
+  document.getElementById('pipeline').classList.add('visible');
+  document.getElementById('pipeline-repo').textContent = url;
+  document.getElementById('pipeline-ts').textContent = new Date().toISOString();
+  document.getElementById('verdict-badge').textContent = 'Running...';
+  document.getElementById('verdict-badge').className = 'verdict-badge verdict-running';
+  document.getElementById('results-table').style.display = 'none';
+  document.getElementById('warnings-box').style.display = 'none';
+  document.getElementById('soul-box').style.display = 'none';
+
+  try {
+    const r = await fetch('/validate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        repo_url: url,
+        branch: document.getElementById('branch').value.trim() || null,
+        submitter: document.getElementById('submitter').value || 'anonymous',
+        team: document.getElementById('team').value || 'unknown',
+      })
+    });
+    const {job_id} = await r.json();
+    pollInterval = setInterval(() => pollJob(job_id), 2000);
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Validate';
+    alert('Submission failed: ' + e.message);
+  }
+}
+
+async function pollJob(job_id) {
+  const r = await fetch('/validate/' + job_id);
+  const d = await r.json();
+
+  if (d.status === 'done') {
+    clearInterval(pollInterval);
+    renderReport(d.report);
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('submit-btn').textContent = 'Validate';
+  } else if (d.status === 'error') {
+    clearInterval(pollInterval);
+    document.getElementById('verdict-badge').textContent = 'Error';
+    document.getElementById('verdict-badge').className = 'verdict-badge verdict-rejected';
+    document.getElementById('submit-btn').disabled = false;
+    document.getElementById('submit-btn').textContent = 'Validate';
+  }
+}
+
+function renderReport(r) {
+  // Verdict
+  const badge = document.getElementById('verdict-badge');
+  badge.textContent = r.approved ? '✅ APPROVED' : '❌ REJECTED';
+  badge.className = 'verdict-badge ' + (r.approved ? 'verdict-approved' : 'verdict-rejected');
+
+  // Agent type
+  const atb = document.getElementById('agent-type-badge');
+  atb.textContent = r.agent_type === 'adk' ? '⚡ ADK SDK Agent' : '📋 Convention Agent';
+  atb.style.display = 'inline-block';
+
+  // Stage indicators
+  const hard = r.hard_gates;
+  setStage('stage-hard', hard.passed === hard.total, 'complete', `${hard.passed}/${hard.total} passed`);
+  const soft = r.soft_gates;
+  setStage('stage-soft', true, 'complete', `${soft.passed}/${soft.total} passed`);
+  setStage('stage-quality', true, 'complete', `${r.quality_score}/100`);
+  setStage('stage-memory', true, 'complete', 'Updated');
+
+  // Scores
+  const hEl = document.getElementById('score-hard');
+  hEl.textContent = `${hard.passed}/${hard.total}`;
+  hEl.className = 'value ' + (hard.passed === hard.total ? 'pass' : 'fail');
+
+  const sEl = document.getElementById('score-soft');
+  sEl.textContent = `${soft.passed}/${soft.total}`;
+  sEl.className = 'value ' + (soft.passed === soft.total ? 'pass' : 'warn');
+
+  const qEl = document.getElementById('score-quality');
+  qEl.textContent = r.quality_score;
+  qEl.className = 'value ' + (r.quality_score >= 70 ? 'pass' : r.quality_score >= 50 ? 'warn' : 'fail');
+
+  // Warnings
+  if (r.warnings && r.warnings.length) {
+    const wb = document.getElementById('warnings-box');
+    const wl = document.getElementById('warnings-list');
+    wl.innerHTML = r.warnings.map(w => `<li>${w}</li>`).join('');
+    wb.style.display = 'block';
+  }
+
+  // Results table
+  const tbody = document.getElementById('results-body');
+  tbody.innerHTML = r.results.map(row => `
+    <tr>
+      <td><code>${row.id}</code></td>
+      <td>${row.name}</td>
+      <td><span class="tag tag-${row.tier.toLowerCase()}">${row.tier}</span></td>
+      <td>${row.passed
+        ? '<span class="icon-pass">✅</span>'
+        : (row.tier === 'SOFT' ? '<span class="icon-warn">⚠️</span>' : '<span class="icon-fail">❌</span>')}
+      </td>
+      <td style="font-size:.78rem;color:#475569">${row.message}</td>
+    </tr>
+  `).join('');
+  document.getElementById('results-table').style.display = 'table';
+
+  // soul.py memory note
+  document.getElementById('soul-note').textContent =
+    `Submission recorded. Team "${r.team}" history updated in MEMORY.md (rules@${r.rules_version}).`;
+  document.getElementById('soul-box').style.display = 'block';
+
+  // Hard count
+  document.getElementById('hard-count').textContent = `${hard.passed}/${hard.total} passed`;
+  document.getElementById('soft-count').textContent = `${soft.passed}/${soft.total} passed`;
+  document.getElementById('quality-count').textContent = `${r.quality_score}/100`;
+}
+
+function setStage(id, pass, status, countText) {
+  const el = document.getElementById(id);
+  el.className = 'stage ' + status;
+  const icon = el.querySelector('.stage-icon');
+  if (id === 'stage-hard') icon.textContent = pass ? '🟢' : '🔴';
+  else if (id === 'stage-soft') icon.textContent = pass ? '🟢' : '🟡';
+  else if (id === 'stage-quality') icon.textContent = '🔵';
+  else icon.textContent = '🧠';
+  el.querySelector('.stage-count').textContent = countText;
+}
+
+loadHealth();
+
+  function autoParseBranch(url) {
+    var m = url.match(/github\.com\/[^\/]+\/[^\/]+\/tree\/([^\/]+)/);
+    if (m) {
+      document.getElementById('branch').value = m[1];
+    }
+  }
+
+</script>
+</body>
+</html>
