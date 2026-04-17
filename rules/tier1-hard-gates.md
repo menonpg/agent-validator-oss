@@ -18,10 +18,10 @@ variables or Secret Manager.
 ### Parameters
 ```yaml
 patterns:
-  - "sk-[a-zA-Z0-9]{32,}"
-  - "AIza[0-9A-Za-z\\-_]{35}"
-  - "AKIA[0-9A-Z]{16}"
-  - "ghp_[a-zA-Z0-9]{36}"
+  - "sk-" + "[a-zA-Z0-9]{32,}"  # pattern: OpenAI key  # OpenAI key pattern
+  - "AIza" + "[0-9A-Za-z\\-_]{35}"  # pattern: GCP key
+  - "AKIA" + "[0-9A-Z]{16}"  # pattern: AWS key
+  - "ghp_" + "[a-zA-Z0-9]{36}"  # pattern: GitHub PAT  # GitHub PAT pattern
   - "xoxb-[0-9]{11}-[0-9]{11}-[a-zA-Z0-9]{24}"
 entropy_threshold: 4.2
 exclude_paths: [".env.example", "tests/fixtures/"]
