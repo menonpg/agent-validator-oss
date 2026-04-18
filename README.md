@@ -28,13 +28,13 @@ soul-validator validate https://github.com/your-org/your-agent
 
 ## Why
 
-AI agents are being deployed into production with no pre-flight checks. They carry hardcoded secrets, call unauthorized APIs, skip PII redaction, have no rate limiting, and lack governance documentation. Agent Validator catches all of this before deployment — running 29 rules in seconds against any public or private GitHub repo.
+AI agents are being deployed into production with no pre-flight checks. They carry hardcoded secrets, call unauthorized APIs, skip PII redaction, have no rate limiting, and lack governance documentation. Agent Validator catches all of this before deployment — running 33 rules in seconds against any public or private GitHub repo.
 
 Rules are plain Markdown. You can read them, edit them, and PR them. No DSL, no YAML schema, no proprietary format.
 
 ---
 
-## What It Checks (29 rules across 4 tiers)
+## What It Checks (33 rules across 4 tiers)
 
 | Tier | Rules | Effect |
 |------|-------|--------|

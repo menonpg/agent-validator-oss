@@ -448,3 +448,141 @@ Judge score >= 7.0/10 on PII protection.
 - OWASP LLM Top 10: LLM06 (Sensitive Information Disclosure)
 
 ---
+
+---
+
+## RULE: MEM-001 — Memory Architecture Present
+
+**Tier:** SOFT (fail = warn)
+**Check type:** structure_check
+**Severity:** MEDIUM
+**Tags:** memory, soul.py, identity, agent-quality
+
+### Description
+AI agents that lack persistent memory architecture suffer from catastrophic forgetting — losing context, persona, and learned behaviors between sessions. This rule checks for the presence of a memory layer: a `SOUL.md` identity file, `MEMORY.md` log, or a documented memory integration (soul.py, mem0, Zep, Letta, or MemGPT).
+
+Agents without memory are stateless. Stateless agents are unreliable in production.
+
+### Parameters
+```yaml
+check: memory_architecture_present
+indicators:
+  - "SOUL.md"
+  - "MEMORY.md"
+  - "soul-agent"
+  - "soul_agent"
+  - "mem0"
+  - "zep"
+  - "letta"
+  - "memgpt"
+```
+
+### Pass Condition
+At least one memory architecture indicator found in the repo (file or dependency).
+
+### Failure Message
+> ⚠️ No memory architecture detected. AI agents without persistent memory lose context between sessions.
+> Add a `SOUL.md` + `MEMORY.md` (soul.py), or integrate a memory layer (mem0, Zep, Letta).
+> See: https://github.com/menonpg/soul.py
+
+### References
+- arXiv:2604.09588 — Persistent Identity in AI Agents
+- soul.py: https://pypi.org/project/soul-agent/
+
+---
+
+## RULE: DEP-001 — Dependencies Pinned
+
+**Tier:** SOFT (fail = warn)
+**Check type:** structure_check
+**Severity:** MEDIUM
+**Tags:** reliability, supply-chain, reproducibility
+
+### Description
+Unpinned dependencies (`requests`, `fastapi`) allow supply-chain attacks and non-reproducible builds. Agents with floating versions may silently break when a dependency updates. All dependencies must be pinned to exact versions (`requests==2.31.0`) or minimum bounds with an upper cap.
+
+### Parameters
+```yaml
+check: deps_pinned
+files:
+  - "requirements.txt"
+  - "pyproject.toml"
+  - "setup.cfg"
+pattern_fail: "^[a-zA-Z][a-zA-Z0-9_-]+\\s*$"
+```
+
+### Pass Condition
+requirements.txt (or equivalent) exists and all entries include a version specifier (`==`, `>=`, `~=`, `<=`).
+
+### Failure Message
+> ⚠️ Unpinned dependencies detected in `{file}`.
+> Pin all dependencies to exact or bounded versions for reproducible, supply-chain-safe deployments.
+
+### References
+- OWASP A06:2021 (Vulnerable and Outdated Components)
+- SLSA Supply Chain Security Framework
+
+---
+
+## RULE: OBS-004 — Health Endpoint Present
+
+**Tier:** SOFT (fail = warn)
+**Check type:** regex_scan
+**Severity:** LOW
+**Tags:** observability, reliability, ops
+
+### Description
+Production AI agents must expose a `/health` or `/healthz` endpoint for load balancers, orchestrators, and monitoring systems to verify liveness. Without a health endpoint, failed agents cannot be automatically detected and restarted.
+
+### Parameters
+```yaml
+patterns:
+  - "/health"
+  - "/healthz"
+  - "health_check"
+  - "@app.get.*health"
+file_glob: "**/*.py"
+```
+
+### Pass Condition
+At least one health endpoint pattern found in source.
+
+### Failure Message
+> ⚠️ No health endpoint detected.
+> Add a `GET /health` endpoint returning `{"status": "ok"}` for production monitoring and orchestrator compatibility.
+
+### References
+- Kubernetes liveness/readiness probe spec
+- Google A2A: agent health requirements
+
+---
+
+## RULE: SEC-005 — No Eval With External Input
+
+**Tier:** SOFT (fail = warn)
+**Check type:** ast_check
+**Severity:** HIGH
+**Tags:** security, code-injection, owasp-llm-top10
+
+### Description
+Using `eval()` or `exec()` with user-provided or LLM-generated content creates critical code injection vulnerabilities. Even if wrapped in try/except, eval with external input allows arbitrary code execution.
+
+### Parameters
+```yaml
+check: eval_with_external_input
+patterns:
+  - "eval\\s*\\("
+  - "exec\\s*\\("
+file_glob: "**/*.py"
+```
+
+### Pass Condition
+No `eval()` or `exec()` calls found, or calls exist only with hardcoded string literals.
+
+### Failure Message
+> ⚠️ `eval()` or `exec()` detected in `{file}` line {line}.
+> Never pass LLM output or user input to eval/exec. Use safe alternatives (ast.literal_eval, explicit parsing).
+
+### References
+- OWASP LLM Top 10: LLM02 (Insecure Output Handling)
+- CWE-95: Improper Neutralization of Directives in Eval

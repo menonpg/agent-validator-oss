@@ -24,7 +24,7 @@ AGENT_CARD = {
     "name": "Agent Validator",
     "description": (
         "Validates AI agent repositories against enterprise compliance standards. "
-        "Checks 29 rules across security, structure, governance, safety, and A2A protocol compliance."
+        "Checks 33 rules across security, structure, governance, safety, and A2A protocol compliance."
     ),
     "version": "1.1.0",
     "url": os.getenv("SERVICE_URL", "https://agent-validator-hvky63ls3a-uc.a.run.app"),
