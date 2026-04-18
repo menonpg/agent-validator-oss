@@ -121,6 +121,41 @@ file_glob: "**/*.py"
 
 ---
 
+## Quickstart (Local)
+
+**Prerequisites:** Python 3.11+, `git` installed on PATH (for repo cloning).
+
+```bash
+# 1. Clone
+git clone https://github.com/menonpg/agent-validator-oss.git
+cd agent-validator-oss
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Set required env vars
+export OPENAI_API_KEY=sk-...           # for LLM-judge checks (optional — rule engine works without it)
+export SERVICE_URL=http://localhost:8080
+
+# 4. Run
+uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+
+# 5. Validate a repo
+curl -X POST http://localhost:8080/validate \
+  -H "Content-Type: application/json" \
+  -d '{"repo_url": "https://github.com/menonpg/soul.py", "submitter": "you"}'
+# → {"job_id": "abc123", "status": "queued"}
+
+# 6. Poll for result
+curl http://localhost:8080/validate/abc123
+```
+
+Open `http://localhost:8080` in your browser for the full UI.
+
+**No LLM key?** The regex, AST, and structure checks all run without one. Only `llm_judge` checks require `OPENAI_API_KEY` — the report will skip those rules gracefully.
+
+---
+
 ## Deploy
 
 **Docker:**
