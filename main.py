@@ -24,7 +24,7 @@ AGENT_CARD = {
     "name": "Agent Validator",
     "description": (
         "Validates AI agent repositories against enterprise compliance standards. "
-        "Checks 33 rules across security, structure, governance, safety, and A2A protocol compliance."
+        "Checks 29 rules across security, structure, governance, safety, and A2A protocol compliance."
     ),
     "version": "1.1.0",
     "url": os.getenv("SERVICE_URL", "https://agent-validator-hvky63ls3a-uc.a.run.app"),
@@ -37,7 +37,7 @@ AGENT_CARD = {
             "id": "validate-agent",
             "name": "Validate Agent Repository",
             "description": (
-                "Clone and validate a GitHub agent repository against 33 compliance rules "
+                "Clone and validate a GitHub agent repository against 29 compliance rules "
                 "covering security, structure, governance, safety, and A2A protocol."
             ),
             "inputModes": ["text"],
