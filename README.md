@@ -2,7 +2,7 @@
 
 **Rules-as-Markdown governance engine for AI agent deployments. Validates any GitHub repo against enterprise compliance standards before it ships.**
 
-[![PyPI version](https://img.shields.io/pypi/v/soul-validator.svg)](https://pypi.org/project/soul-validator/)
+[![PyPI version](https://img.shields.io/pypi/v/soul-agent-validator.svg)](https://pypi.org/project/soul-agent-validator/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Powered by soul.py](https://img.shields.io/badge/memory-soul.py-8B5CF6)](https://github.com/menonpg/soul.py)
 [![A2A Compatible](https://img.shields.io/badge/Google%20A2A-compatible-4285F4)](https://github.com/google-deepmind/agent-to-agent)
