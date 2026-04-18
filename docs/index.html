@@ -529,9 +529,9 @@ curl -X POST https://agent-validator-hvky63ls3a-uc.a.run.app/validate \
         <tr><td><strong>REL-003</strong></td><td>Max Steps Limit</td><td>ast_check</td><td>NIST AI RMF</td></tr>
         <tr><td><strong>STR-001</strong></td><td>Required Files Present</td><td>ast_check</td><td>Internal</td></tr>
         <tr><td><strong>STR-002</strong></td><td>Test Coverage Required</td><td>ast_check</td><td>Internal</td></tr>
-        <tr><td><strong>ING-001</strong></td><td>BigQuery Row-Level Security</td><td>ast_check</td><td>enterprise Custom</td></tr>
-        <tr><td><strong>ING-002</strong></td><td>External API Allowlist</td><td>regex_scan</td><td>enterprise Custom</td></tr>
-        <tr><td><strong>ING-003</strong></td><td>PII Redaction in Logs</td><td>regex_scan + ast_check</td><td>GDPR / enterprise</td></tr>
+        <tr><td><strong>CUSTOM-001</strong></td><td>BigQuery Row-Level Security</td><td>ast_check</td><td>Custom Rule Example</td></tr>
+        <tr><td><strong>CUSTOM-002</strong></td><td>External API Allowlist</td><td>regex_scan</td><td>Custom Rule Example</td></tr>
+        <tr><td><strong>CUSTOM-003</strong></td><td>PII Redaction in Logs</td><td>regex_scan + ast_check</td><td>GDPR / Enterprise</td></tr>
       </tbody>
     </table>
   </div>
@@ -556,7 +556,7 @@ curl -X POST https://agent-validator-hvky63ls3a-uc.a.run.app/validate \
         <tr><td><strong>REL-002</strong></td><td>Retry with Backoff</td><td>ast_check</td><td>Reliability</td></tr>
         <tr><td><strong>REL-004</strong></td><td>Error Handling</td><td>ast_check</td><td>Reliability</td></tr>
         <tr><td><strong>ALI-002</strong></td><td>AI Disclosure in System Prompt</td><td>ast_check</td><td>EU AI Act</td></tr>
-        <tr><td><strong>ING-004</strong></td><td>GCP Data Residency</td><td>regex_scan</td><td>enterprise Custom</td></tr>
+        <tr><td><strong>CUSTOM-004</strong></td><td>GCP Data Residency</td><td>regex_scan</td><td>Custom Rule Example</td></tr>
       </tbody>
     </table>
   </div>
@@ -949,7 +949,7 @@ async function runValidation(urlId, branchId, nameId, resultId) {
           <tr><td><code>A2A-003</code></td><td>Task Lifecycle States Handled</td><td>A2A Protocol</td><td>Source scan — submitted/working/completed/failed required</td></tr>
           <tr><td><code>A2A-004</code></td><td>Auth Declared in Agent Card</td><td>A2A Protocol</td><td>Schema — authentication field required in agent.json</td></tr>
           <tr><td><code>A2A-005</code></td><td>Streaming Capability Declared</td><td>A2A Protocol</td><td>Schema — capabilities.streaming required in agent.json</td></tr>
-          <tr><td><code>ING-001</code></td><td>enterprise API Allowlist</td><td>Custom</td><td>Regex — only approved enterprise API domains permitted</td></tr>
+          <tr><td><code>CUSTOM-001</code></td><td>External API Allowlist</td><td>Custom</td><td>Regex — only approved API domains permitted</td></tr>
         </tbody>
       </table>
     </div>

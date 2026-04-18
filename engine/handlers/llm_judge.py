@@ -7,10 +7,15 @@ import os
 import asyncio
 import re
 from pathlib import Path
-from google import genai
-from google.genai import types
 from engine.rule_loader import Rule
 from engine.report import RuleResult
+
+try:
+    from google import genai
+    from google.genai import types
+    _GENAI_AVAILABLE = True
+except ImportError:
+    _GENAI_AVAILABLE = False
 
 # Load SOUL.md -- defines the judge's identity and scoring philosophy
 _SOUL_PATH = Path(__file__).parent.parent / "soul" / "SOUL.md"
@@ -23,7 +28,7 @@ _MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
 class LLMJudgeHandler:
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY", "")
-        self.client = genai.Client(api_key=api_key) if api_key else None
+        self.client = genai.Client(api_key=api_key) if (api_key and _GENAI_AVAILABLE) else None
 
     def _generate(self, prompt: str) -> str:
         if not self.client:
