@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "soul-validator"
+version = "0.1.0"
+description = "Rules-as-Markdown AI agent governance validator. 33 compliance checks, Google A2A compatible, soul.py powered."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Prahlad Menon", email = "prahlad.menon@quant.md" }]
+keywords = ["ai-agents", "governance", "compliance", "soul.py", "a2a", "llm", "validation"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.111.0",
+  "uvicorn>=0.29.0",
+  "pydantic>=2.7.0",
+  "gitpython>=3.1.43",
+  "PyYAML>=6.0.1",
+  "python-multipart>=0.0.22",
+  "soul-agent>=0.1.1",
+  "httpx>=0.27.0",
+]
+
+[project.optional-dependencies]
+gcp = [
+  "google-genai>=1.9.0",
+  "google-cloud-storage>=2.16.0",
+  "google-cloud-monitoring>=2.20.0",
+  "google-auth>=2.29.0",
+  "pip-audit>=2.7.3",
+]
+
+[project.scripts]
+soul-validator = "soul_validator.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/menonpg/agent-validator-oss"
+Repository = "https://github.com/menonpg/agent-validator-oss"
+Paper = "https://arxiv.org/abs/2604.09588"
+
+[tool.hatch.build.targets.wheel]
+packages = ["soul_validator"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/soul_validator", "/README.md", "/LICENSE"]

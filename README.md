@@ -2,6 +2,7 @@
 
 **Rules-as-Markdown governance engine for AI agent deployments. Validates any GitHub repo against enterprise compliance standards before it ships.**
 
+[![PyPI version](https://img.shields.io/pypi/v/soul-validator.svg)](https://pypi.org/project/soul-validator/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Powered by soul.py](https://img.shields.io/badge/memory-soul.py-8B5CF6)](https://github.com/menonpg/soul.py)
 [![A2A Compatible](https://img.shields.io/badge/Google%20A2A-compatible-4285F4)](https://github.com/google-deepmind/agent-to-agent)
@@ -13,6 +14,14 @@ Point it at a GitHub repo. Get back a structured report card: PASS / WARN / FAIL
 curl -X POST https://your-validator/validate \
   -H "Content-Type: application/json" \
   -d '{"repo_url": "https://github.com/your-org/your-agent", "submitter": "you"}'
+```
+
+Or install and run locally in seconds:
+
+```bash
+pip install soul-validator
+soul-validator serve         # starts at http://localhost:8080
+soul-validator validate https://github.com/your-org/your-agent
 ```
 
 ---
