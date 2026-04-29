@@ -19,7 +19,7 @@ curl -X POST https://your-validator/validate \
 Or install and run locally in seconds:
 
 ```bash
-pip install soul-validator
+pip install soul-agent-validator
 soul-validator serve         # starts at http://localhost:8080
 soul-validator validate https://github.com/your-org/your-agent
 ```

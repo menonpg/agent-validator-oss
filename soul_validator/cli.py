@@ -1,16 +1,18 @@
 """
-soul-validator CLI
+soul-agent-validator CLI (also available as soul-validator)
 
 Usage:
-    soul-validator serve                          # Start the web server (port 8080)
-    soul-validator validate <github_url>          # Validate a repo from the CLI
+    soul-agent-validator serve                    # Start the web server (port 8080)
+    soul-agent-validator validate <github_url>    # Validate a repo from the CLI
+    soul-validator serve                          # Also works
+    soul-validator validate <github_url>          # Also works
 """
 import argparse
 import sys
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="soul-validator",
+        prog="soul-agent-validator",
         description="Rules-as-Markdown AI agent governance validator"
     )
     sub = parser.add_subparsers(dest="command")
