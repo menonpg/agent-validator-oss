@@ -1,12 +1,16 @@
 """
-a2a_check handler — validates Google A2A protocol compliance.
+a2a_check handler — validates A2A Protocol v1.0 (Linux Foundation) compliance.
 Checks Agent Card existence/schema, task endpoint, lifecycle states,
-authentication declaration, and streaming capability declaration.
+authentication declaration, streaming capability, runtime declaration,
+and AP2 payments declaration.
 
 Added: 2026-03-19
+Updated: 2026-05-11 — A2A v1.0 (Linux Foundation): new fields provider,
+  defaultInputModes, defaultOutputModes, pushNotifications, runtimeEnvironment,
+  payments. New rules A2A-006, A2A-007. message/send + message/stream patterns.
+  input-required task state. openIdConnect auth scheme.
 """
 import json
-import re
 from pathlib import Path
 from engine.rule_loader import Rule
 from engine.report import RuleResult
@@ -27,48 +31,83 @@ class A2ACheckHandler:
             return self._check_agent_card_auth(rule, repo_path, params)
         elif check == "agent_card_streaming":
             return self._check_agent_card_streaming(rule, repo_path, params)
+        elif check == "agent_card_runtime":
+            return self._check_agent_card_runtime(rule, repo_path, params)
+        elif check == "agent_card_ap2":
+            return self._check_agent_card_ap2(rule, repo_path, params)
         else:
             return RuleResult(passed=False, message=f"Unknown a2a_check sub-type: {check}")
 
-    # ── Agent Card existence + required fields ──────────────────────────────
+    # ── Helpers ──────────────────────────────────────────────────────────────
 
-    def _check_agent_card_exists(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
+    def _load_agent_card(self, repo_path: Path, rule_id: str):
         card_path = repo_path / ".well-known" / "agent.json"
         if not card_path.exists():
-            return RuleResult(
+            return None, RuleResult(
                 passed=False,
-                message=rule.failure_message,
+                message=f"{rule_id}: agent.json not found at .well-known/agent.json",
                 details={"missing": ".well-known/agent.json"},
             )
-
         try:
             card = json.loads(card_path.read_text())
+            return card, None
         except Exception as e:
-            return RuleResult(
+            return None, RuleResult(
                 passed=False,
-                message=f"A2A-001: agent.json is not valid JSON — {e}",
+                message=f"{rule_id}: agent.json is not valid JSON — {e}",
                 details={"error": str(e)},
             )
 
-        required = params.get("required_fields", ["name", "description", "version", "url", "capabilities", "skills"])
+    # ── A2A-001: Agent Card existence + required fields ──────────────────────
+
+    def _check_agent_card_exists(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
+        card, err = self._load_agent_card(repo_path, "A2A-001")
+        if err:
+            return err
+
+        default_required = [
+            "name", "description", "version", "url",
+            "capabilities", "skills",
+            "provider",
+            "defaultInputModes",
+            "defaultOutputModes",
+        ]
+        required = params.get("required_fields", default_required)
         missing = [f for f in required if f not in card]
+        recommended = params.get("recommended_fields", ["signedCard"])
+        missing_recommended = [f for f in recommended if f not in card]
+
         if missing:
             return RuleResult(
                 passed=False,
-                message=f"A2A-001: agent.json missing required fields: {missing}",
+                message=rule.failure_message,
                 details={"missing_fields": missing, "present_fields": list(card.keys())},
             )
 
+        details = {"card_name": card.get("name"), "version": card.get("version")}
+        if missing_recommended:
+            details["recommended_missing"] = missing_recommended
+            details["hint"] = "Consider adding signedCard for cryptographic identity (A2A v1.0)"
+
         return RuleResult(
             passed=True,
-            message=f"A2A-001 passed — Agent Card found with all required fields",
-            details={"card_name": card.get("name"), "version": card.get("version")},
+            message="A2A-001 passed — Agent Card found with all required fields",
+            details=details,
         )
 
-    # ── Task endpoint (JSON-RPC 2.0 tasks/send) ─────────────────────────────
+    # ── A2A-002: Task endpoint (JSON-RPC 2.0) ───────────────────────────────
 
     def _check_task_endpoint(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
-        patterns = params.get("patterns", ["tasks/send", "jsonrpc", "JsonRpc", "JSONRPC"])
+        default_patterns = [
+            "tasks/send",
+            "message/send",
+            "message/stream",
+            "jsonrpc",
+            "json_rpc",
+            "JsonRpc",
+            "JSONRPC",
+        ]
+        patterns = params.get("patterns", default_patterns)
         file_glob = params.get("file_glob", "**/*.py")
         hits = []
 
@@ -79,18 +118,11 @@ class A2ACheckHandler:
                 continue
             for pattern in patterns:
                 if pattern in content:
-                    hits.append({
-                        "file": str(py_file.relative_to(repo_path)),
-                        "pattern": pattern,
-                    })
-                    break  # one hit per file is enough
+                    hits.append({"file": str(py_file.relative_to(repo_path)), "pattern": pattern})
+                    break
 
         if not hits:
-            return RuleResult(
-                passed=False,
-                message=rule.failure_message,
-                details={"searched_patterns": patterns},
-            )
+            return RuleResult(passed=False, message=rule.failure_message, details={"searched_patterns": patterns})
 
         return RuleResult(
             passed=True,
@@ -98,13 +130,13 @@ class A2ACheckHandler:
             details={"hits": hits[:5]},
         )
 
-    # ── Task lifecycle states ────────────────────────────────────────────────
+    # ── A2A-003: Task lifecycle states ──────────────────────────────────────
 
     def _check_task_states(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
-        required_states = params.get("required_states", ["submitted", "working", "completed", "failed"])
+        default_states = ["submitted", "working", "completed", "failed", "input-required"]
+        required_states = params.get("required_states", default_states)
         file_glob = params.get("file_glob", "**/*.py")
 
-        # Collect all source content
         all_content = ""
         for py_file in repo_path.glob(file_glob):
             try:
@@ -126,30 +158,19 @@ class A2ACheckHandler:
             details={"states_found": required_states},
         )
 
-    # ── Auth declaration in Agent Card ──────────────────────────────────────
+    # ── A2A-004: Auth declaration in Agent Card ──────────────────────────────
 
     def _check_agent_card_auth(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
-        card_path = repo_path / ".well-known" / "agent.json"
-        if not card_path.exists():
-            return RuleResult(
-                passed=False,
-                message="A2A-004: agent.json not found — cannot check authentication",
-            )
-
-        try:
-            card = json.loads(card_path.read_text())
-        except Exception:
-            return RuleResult(passed=False, message="A2A-004: agent.json is not valid JSON")
+        card, err = self._load_agent_card(repo_path, "A2A-004")
+        if err:
+            return err
 
         if "authentication" not in card:
-            return RuleResult(
-                passed=False,
-                message=rule.failure_message,
-                details={"card_fields": list(card.keys())},
-            )
+            return RuleResult(passed=False, message=rule.failure_message, details={"card_fields": list(card.keys())})
 
         auth = card["authentication"]
-        valid_schemes = params.get("valid_schemes", ["apiKey", "oauth2", "bearer", "none"])
+        default_valid = ["apiKey", "oauth2", "bearer", "openIdConnect", "none"]
+        valid_schemes = params.get("valid_schemes", default_valid)
         schemes = auth.get("schemes", [])
         invalid = [s for s in schemes if s not in valid_schemes]
         if invalid:
@@ -165,31 +186,99 @@ class A2ACheckHandler:
             details={"schemes": schemes},
         )
 
-    # ── Streaming capability declaration ────────────────────────────────────
+    # ── A2A-005: Streaming + pushNotifications ───────────────────────────────
 
     def _check_agent_card_streaming(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
-        card_path = repo_path / ".well-known" / "agent.json"
-        if not card_path.exists():
-            return RuleResult(
-                passed=False,
-                message="A2A-005: agent.json not found — cannot check streaming declaration",
-            )
-
-        try:
-            card = json.loads(card_path.read_text())
-        except Exception:
-            return RuleResult(passed=False, message="A2A-005: agent.json is not valid JSON")
+        card, err = self._load_agent_card(repo_path, "A2A-005")
+        if err:
+            return err
 
         capabilities = card.get("capabilities", {})
-        if "streaming" not in capabilities:
+        required_fields = params.get("capability_fields", ["streaming", "pushNotifications"])
+        missing = [f for f in required_fields if f not in capabilities]
+
+        if missing:
             return RuleResult(
                 passed=False,
                 message=rule.failure_message,
-                details={"capabilities_found": list(capabilities.keys())},
+                details={"missing_capability_fields": missing, "capabilities_found": list(capabilities.keys())},
             )
 
         return RuleResult(
             passed=True,
-            message=f"A2A-005 passed — streaming declared: {capabilities['streaming']}",
-            details={"streaming": capabilities["streaming"]},
+            message="A2A-005 passed — streaming and pushNotifications declared",
+            details={
+                "streaming": capabilities.get("streaming"),
+                "pushNotifications": capabilities.get("pushNotifications"),
+            },
+        )
+
+    # ── A2A-006: Runtime and SDK Compatibility (NEW v1.0) ────────────────────
+
+    def _check_agent_card_runtime(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
+        card, err = self._load_agent_card(repo_path, "A2A-006")
+        if err:
+            return err
+
+        recommended_field = params.get("recommended_field", "runtimeEnvironment")
+        valid_runtimes = params.get("valid_runtimes", ["python", "javascript", "java", "go", "dotnet"])
+
+        runtime = card.get(recommended_field) or card.get("capabilities", {}).get(recommended_field)
+
+        if not runtime:
+            return RuleResult(
+                passed=False,
+                message=rule.failure_message,
+                details={"missing_field": recommended_field, "valid_runtimes": valid_runtimes},
+            )
+
+        runtime_lower = runtime.lower() if isinstance(runtime, str) else ""
+        if runtime_lower not in valid_runtimes:
+            return RuleResult(
+                passed=False,
+                message=f"A2A-006: Unknown runtimeEnvironment '{runtime}'. Valid: {valid_runtimes}",
+                details={"declared_runtime": runtime, "valid_runtimes": valid_runtimes},
+            )
+
+        return RuleResult(
+            passed=True,
+            message=f"A2A-006 passed — runtimeEnvironment declared: {runtime}",
+            details={"runtimeEnvironment": runtime},
+        )
+
+    # ── A2A-007: Agent Payments Protocol AP2 (NEW v1.0) ──────────────────────
+
+    def _check_agent_card_ap2(self, rule: Rule, repo_path: Path, params: dict) -> RuleResult:
+        card, err = self._load_agent_card(repo_path, "A2A-007")
+        if err:
+            return err
+
+        capability_field = params.get("capability_field", "payments")
+        applicable_domains = params.get("applicable_domains", ["financial-services", "procurement", "e-commerce"])
+
+        capabilities = card.get("capabilities", {})
+        agent_domain = (
+            card.get("domain") or card.get("category") or capabilities.get("domain") or ""
+        ).lower()
+
+        is_applicable = any(d in agent_domain for d in applicable_domains)
+
+        if not is_applicable:
+            return RuleResult(
+                passed=True,
+                message="A2A-007 skipped — agent domain not in financial/transactional scope",
+                details={"agent_domain": agent_domain or "(not declared)", "applicable_domains": applicable_domains},
+            )
+
+        if capability_field not in capabilities:
+            return RuleResult(
+                passed=False,
+                message=rule.failure_message,
+                details={"agent_domain": agent_domain, "missing_capability": capability_field, "capabilities_found": list(capabilities.keys())},
+            )
+
+        return RuleResult(
+            passed=True,
+            message="A2A-007 passed — AP2 payments capability declared",
+            details={"domain": agent_domain, "payments": capabilities[capability_field]},
         )

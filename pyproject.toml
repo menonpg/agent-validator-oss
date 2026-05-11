@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "soul-agent-validator"
-version = "0.1.2"
-description = "Rules-as-Markdown AI agent governance validator. 33 compliance checks, Google A2A compatible, soul.py powered."
+version = "0.1.3"
+description = "Rules-as-Markdown AI agent governance validator. 35 compliance checks, A2A v1.0 (Linux Foundation) compatible, soul.py powered."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Prahlad Menon", email = "prahlad.menon@quant.md" }]
